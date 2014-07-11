@@ -4,7 +4,7 @@ import types
 import logging
 import unicodedata
 from fiscalGeneric import PrinterInterface, PrinterException
-import epsonFiscalDriver
+import genericFiscalDriver
 
 
 class ValidationError(Exception):
@@ -70,6 +70,8 @@ class HasarPrinter(PrinterInterface):
     CMD_CLOSE_FISCAL_RECEIPT = 0x45
     CMD_DAILY_CLOSE = 0x39
     CMD_STATUS_REQUEST = 0x2a
+    CMD_GET_INIT_DATA = 0x73
+    CMD_GET_PRINTER_VERSION = 0x7f
 
     CMD_CLOSE_CREDIT_NOTE = 0x81
 
@@ -141,13 +143,13 @@ class HasarPrinter(PrinterInterface):
                 self.driver = DummyDriver()
             elif host:
                 if connectOnEveryCommand:
-                    self.driver = epsonFiscalDriver.EpsonFiscalDriverProxy(host, port,
+                    self.driver = genericFiscalDriver.EpsonFiscalDriverProxy(host, port,
                         connectOnEveryCommand=True)
                 else:
-                    self.driver = epsonFiscalDriver.EpsonFiscalDriverProxy(host, port)
+                    self.driver = genericFiscalDriver.EpsonFiscalDriverProxy(host, port)
             else:
                 deviceFile = deviceFile or 0
-                self.driver = epsonFiscalDriver.HasarFiscalDriver(deviceFile, speed)
+                self.driver = genericFiscalDriver.HasarFiscalDriver(deviceFile, speed)
         except Exception, e:
             raise FiscalPrinterError("Imposible establecer comunicación.", e)
         self.model = model
@@ -160,8 +162,8 @@ class HasarPrinter(PrinterInterface):
             ret = self.driver.sendCommand(commandNumber, parameters, skipStatusErrors)
             logging.getLogger().info("reply: %s" % ret)
             return ret
-        except epsonFiscalDriver.PrinterException, e:
-            logging.getLogger().error("epsonFiscalDriver.PrinterException: %s" % str(e))
+        except genericFiscalDriver.PrinterException, e:
+            logging.getLogger().error("genericFiscalDriver.PrinterException: %s" % str(e))
             raise PrinterException("Error de la impresora fiscal: %s.\nComando enviado: %s" % \
                 (str(e), commandString))
 
@@ -426,6 +428,22 @@ class HasarPrinter(PrinterInterface):
         reply = self._sendCommand(self.CMD_DAILY_CLOSE, [type])
         return reply[2:]
 
+    def getPrinterVersion(self):
+        reply = self._sendCommand(self.CMD_GET_PRINTER_VERSION, [], True)
+        if len(reply) < 3:
+            # La respuesta no es válida. Vuelvo a hacer el pedido y
+            #si hay algún error que se reporte como excepción
+            reply = self._sendCommand(self.CMD_GET_PRINTER_VERSION, [], False)
+        return reply[2]
+
+    def getPrinterId(self):
+        reply = self._sendCommand(self.CMD_GET_INIT_DATA, [], True)
+        if len(reply) < 3:
+            # La respuesta no es válida. Vuelvo a hacer el pedido y
+            #si hay algún error que se reporte como excepción
+            reply = self._sendCommand(self.CMD_GET_INIT_DATA, [], False)
+        return reply[4]
+
     def getLastNumber(self, letter):
         reply = self._sendCommand(self.CMD_STATUS_REQUEST, [], True)
         if len(reply) < 3:
@@ -490,6 +508,16 @@ class HasarPrinter(PrinterInterface):
         if ((1 << 5) & x) == (1 << 5):
             ret.append("Poco papel para comprobantes o tickets")
         return ret
+
+    def getErrors(self):
+        ret = []
+        reply = self._sendCommand(self.CMD_STATUS_REQUEST, [], True)
+        printerStatus = reply[0]
+        x = int(printerStatus, 16)
+        for error_tuple in self.driver.printerStatusErrors:
+            if ((error_tuple[0]) & x) == (error_tuple[0]):
+                ret.append(error_tuple[1])
+        return ret         
 
     def __del__(self):
         try:

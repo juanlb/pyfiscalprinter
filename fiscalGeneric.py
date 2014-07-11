@@ -177,6 +177,14 @@ class PrinterInterface:
         """Obtiene el último número de Remtio"""
         raise NotImplementedError
 
+    def getPrinterVersion(self):
+        """Obtiene la version del dispositvo"""
+        raise NotImplementedError
+
+    def getPrinterId(self):
+        """Obtiene el numero de serie del dispositvo"""
+        raise NotImplementedError
+
     def cancelAnyDocument(self):
         """Cancela cualquier documento abierto, sea del tipo que sea.
            No requiere que previamente se haya abierto el documento por este objeto.
@@ -195,6 +203,9 @@ class PrinterInterface:
 
     def getWarnings(self):
         return []
+
+    def getErrors(self):
+        return []        
 
     def openDrawer(self):
         """Abrir cajón del dinero - No es mandatory implementarlo"""

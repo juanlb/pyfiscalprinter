@@ -4,7 +4,7 @@ import types
 import logging
 import unicodedata
 from fiscalGeneric import PrinterInterface, PrinterException
-import epsonFiscalDriver
+import genericFiscalDriver
 
 class FiscalPrinterError(Exception):
     pass
@@ -81,10 +81,10 @@ class EpsonPrinter(PrinterInterface):
             if dummy:
                 self.driver = DummyDriver()
             elif host:
-                self.driver = epsonFiscalDriver.EpsonFiscalDriverProxy(host, port)
+                self.driver = genericFiscalDriver.EpsonFiscalDriverProxy(host, port)
             else:
                 deviceFile = deviceFile or 0
-                self.driver = epsonFiscalDriver.EpsonFiscalDriver(deviceFile, speed)
+                self.driver = genericFiscalDriver.EpsonFiscalDriver(deviceFile, speed)
             #self.driver = FileDriver( "/home/gnarvaja/Desktop/fiscal.txt" )
         except Exception, e:
             raise FiscalPrinterError("Imposible establecer comunicación.", e)
@@ -102,8 +102,8 @@ class EpsonPrinter(PrinterInterface):
                 skipStatusErrors and "T" or "F",
                                                                      str(parameters)))
             return self.driver.sendCommand(commandNumber, parameters, skipStatusErrors)
-        except epsonFiscalDriver.PrinterException, e:
-            logging.getLogger().error("epsonFiscalDriver.PrinterException: %s" % str(e))
+        except genericFiscalDriver.PrinterException, e:
+            logging.getLogger().error("genericFiscalDriver.PrinterException: %s" % str(e))
             raise PrinterException("Error de la impresora fiscal: " + str(e))
 
     def openNonFiscalReceipt(self):
