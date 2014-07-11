@@ -1,4 +1,4 @@
 pyfiscalprinter
 ===============
 
-Drivers for invoice/tickets fiscal printers (Epson &amp; Hasar) Argentina
+Drivers for invoice/tickets fiscal printers (Epson &amp; Hasar) Argentina.
