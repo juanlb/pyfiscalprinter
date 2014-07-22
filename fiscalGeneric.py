@@ -39,6 +39,10 @@ class PrinterInterface:
         """
         raise NotImplementedError
 
+    def getSubtotal(self):
+        """Toma el subtotal, usado para obtener la informacion que fue enviada a la FC"""
+        raise NotImplementedError
+
     def addPayment(self, description, payment):
         """Agrega un pago a la FC.
             @param description  Descripción
@@ -177,9 +181,10 @@ class PrinterInterface:
         """Obtiene el último número de Remtio"""
         raise NotImplementedError
 
-    def getPrinterVersion(self):
-        """Obtiene la version del dispositvo"""
-        raise NotImplementedError
+    #Solo responde la 320
+    #def getPrinterVersion(self):
+    #    """Obtiene la version del dispositvo"""
+    #    raise NotImplementedError
 
     def getPrinterId(self):
         """Obtiene el numero de serie del dispositvo"""

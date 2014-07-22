@@ -220,7 +220,7 @@ class HasarPrinter(PrinterInterface):
         line = 3
         for text in (header + [chr(0x7f)]*3)[:3]: # Agrego chr(0x7f) (DEL) al final para limpiar las
                                                   # líneas no utilizadas
-            self._setHeaderTrailer(line, text)
+            self._setHeaderTrailer(line, str(text))
             line += 1
 
     def setTrailer(self, trailer=None):
@@ -229,13 +229,13 @@ class HasarPrinter(PrinterInterface):
             trailer = []
         line = 11
         for text in (trailer + [chr(0x7f)] * 9)[:9]:
-            self._setHeaderTrailer(line, text)
+            self._setHeaderTrailer(line, str(text))
             line += 1
 
-    def _setCustomerData(self, name, address, doc, docType, ivaType):
+    def _setCustomerData(self, name, address, doc, docType, ivaType, header=None, trailer=None):
         # limpio el header y trailer:
-        self.setHeader()
-        self.setTrailer()
+        self.setHeader(header)
+        self.setTrailer(trailer)
         doc = doc.replace("-", "").replace(".", "")
         if doc and docType != "3" and filter(lambda x: x not in string.digits, doc):
             # Si tiene letras se blanquea el DNI para evitar errores, excepto que sea
@@ -245,7 +245,7 @@ class HasarPrinter(PrinterInterface):
             docType = " "
 
         ivaType = self.ivaTypeMap.get(ivaType, "C")
-        if ivaType != "C" and (not doc or docType != self.DOC_TYPE_CUIT):
+        if (ivaType != "C") and (not doc or docType != self.DOC_TYPE_CUIT):
             raise ValidationError("Error, si el tipo de IVA del cliente NO es consumidor final, "
                 "debe ingresar su número de CUIT.")
         parameters = [self._formatText(name, 'customerName'),
@@ -257,15 +257,15 @@ class HasarPrinter(PrinterInterface):
             parameters.append(self._formatText(address, 'custAddressSize') or " ") # Domicilio
         self._sendCommand(self.CMD_SET_CUSTOMER_DATA, parameters)
 
-    def openBillTicket(self, type, name, address, doc, docType, ivaType):
-        self._setCustomerData(name, address, doc, docType, ivaType)
+    def openBillTicket(self, type, name, address, doc, docType, ivaType, header=None, trailer=None):
+        self._setCustomerData(name, address, doc, docType, ivaType, header,None)
         if type == "A":
             type = "A"
         else:
             type = "B"
         self._currentDocument = self.CURRENT_DOC_BILL_TICKET
         self._savedPayments = []
-        return self._sendCommand(self.CMD_OPEN_FISCAL_RECEIPT, [type, "T"])
+        return self._sendCommand(self.CMD_OPEN_FISCAL_RECEIPT, [str(type), str("T")])
 
     def openTicket(self, defaultLetter="B"):
         if self.model == "320":
@@ -357,6 +357,14 @@ class HasarPrinter(PrinterInterface):
             return status
         raise NotImplementedError
 
+    def getSubtotal(self):
+        reply = self._sendCommand(self.CMD_PRINT_SUBTOTAL, ["P", "0", "0"], True)
+        if len(reply) < 3:
+            # La respuesta no es válida. Vuelvo a hacer el pedido y
+            #si hay algún error que se reporte como excepción
+            reply = self._sendCommand(self.CMD_PRINT_SUBTOTAL, [], False)
+        return reply
+
     def addItem(self, description, quantity, price, iva, discount, discountDescription, negative=False):
         if type(description) in types.StringTypes:
             description = [description]
@@ -428,13 +436,13 @@ class HasarPrinter(PrinterInterface):
         reply = self._sendCommand(self.CMD_DAILY_CLOSE, [type])
         return reply[2:]
 
-    def getPrinterVersion(self):
-        reply = self._sendCommand(self.CMD_GET_PRINTER_VERSION, [], True)
-        if len(reply) < 3:
-            # La respuesta no es válida. Vuelvo a hacer el pedido y
-            #si hay algún error que se reporte como excepción
-            reply = self._sendCommand(self.CMD_GET_PRINTER_VERSION, [], False)
-        return reply[2]
+    #def getPrinterVersion(self):
+    #    reply = self._sendCommand(self.CMD_GET_PRINTER_VERSION, [], True)
+    #    if len(reply) < 3:
+    #        # La respuesta no es válida. Vuelvo a hacer el pedido y
+    #        #si hay algún error que se reporte como excepción
+    #        reply = self._sendCommand(self.CMD_GET_PRINTER_VERSION, [], False)
+    #    return reply[2]
 
     def getPrinterId(self):
         reply = self._sendCommand(self.CMD_GET_INIT_DATA, [], True)
